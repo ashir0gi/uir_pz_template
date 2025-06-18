@@ -1,0 +1,30 @@
+% arara: xelatex
+% arara: biber
+% arara: xelatex: { synctex: true }
+
+\documentclass[12pt,a4paper,oneside,final]{report}
+
+\input{chapters/thesis-template-macro.tex}
+
+\addto{\captionsrussian}{\renewcommand{\bibname}{Список литературы}}
+
+\begin{document}
+
+% Для вставки бланка титульного листа из PDF-файла
+\includepdf[pages={-}, offset=0mm -0mm]{title/TITUL.pdf}
+
+%\clearpage
+%% Тут включается лист с подписями для ВКР
+%\includepdf[pages={-}, offset=0mm -0mm]{title/title-dep22.pdf}
+%\clearpage
+
+% Для вставки бланка задания из PDF-файла
+\includepdf[pages={-}, offset=0mm -0mm]{title/TASK.pdf}
+
+\input{chapters/_content}
+
+\end{document}
+
+%%% Local Variables:
+%%% TeX-engine: xetex
+%%% End:

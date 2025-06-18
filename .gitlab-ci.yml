@@ -1,0 +1,33 @@
+image: aergus/latex:2022-01-02
+
+stages:
+  - build
+  - diff
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+build:
+  stage: build
+  script:
+    - latexmk -xelatex
+  artifacts:
+    paths:
+      - "*.pdf"
+
+diff_master:
+  stage: diff
+  before_script:
+    - git clone https://gitlab.com/git-latexdiff/git-latexdiff.git
+    - cd git-latexdiff
+    - make install-bin
+  script:
+    - cd $CI_PROJECT_DIR
+    - mkdir git-latexdiff-out
+    - git fetch origin master:master
+    - git latexdiff --xelatex --no-view --tmpdirprefix $CI_PROJECT_DIR/git-latexdiff-out master
+  artifacts:
+    paths:
+      - "git-latexdiff-out/*/*.pdf"
+  allow_failure: true
+  when: manual

@@ -1,0 +1,117 @@
+\pagestyle{plain}
+\pagenumbering{arabic}
+\setcounter{page}{2}
+
+\refsection
+
+%\clearpage
+%\thispagestyle{empty}
+
+%\vfill
+
+%\begin{center}
+%[Место для распечатки отчета Антиплагиата]
+%\end{center}
+
+%\newpage
+%\thispagestyle{empty}
+
+%\vfill
+
+%\begin{center}
+%[Место для распечатки отчета Антиплагиата]
+%\end{center}
+
+\clearpage
+
+\input{chapters/thesis-template-abstract.tex}
+
+\clearpage
+
+\tableofcontents{}
+
+\clearpage
+
+\input{chapters/thesis-template-intro.tex}
+
+\clearpage
+
+\input{chapters/thesis-template-chapter1.tex}
+
+\clearpage
+
+\input{chapters/thesis-template-chapter2.tex}
+
+\clearpage
+
+\input{chapters/thesis-template-chapter3.tex}
+
+\clearpage
+
+\input{chapters/thesis-template-chapter4.tex}
+
+\clearpage
+
+\input{chapters/thesis-template-conclusion.tex}
+
+\label{end_of_main_text}
+
+\setcounter{totalfigures}{\the\value{totalfigures}+\the\value{figure}}
+\setcounter{figure}{0}
+\setcounter{totaltables}{\the\value{totaltables}+\the\value{table}}
+\setcounter{table}{0}
+\setcounter{totallistings}{\the\value{totallistings}+\the\value{lstlisting}}
+\setcounter{lstlisting}{0}
+
+\makeatletter
+\edef\@currentlabel{\the\value{totalfigures}}
+\label{figures}
+\edef\@currentlabel{\the\value{totaltables}}
+\label{tables}
+\edef\@currentlabel{\the\value{totallistings}}
+\label{listings}
+\makeatother
+
+\clearpage
+
+\input{chapters/thesis-template-bibl.tex}
+
+\endrefsection
+
+\clearpage
+
+%\chapter*{Приложения}
+%\addcontentsline{toc}{chapter}{Приложения}
+%\appendixtocon
+%\renewcommand{\appendixname}{Приложение}
+\appendix
+\renewcommand{\appendixtocname}{Приложения}
+\addappheadtotoc
+%\titleformat{\chapter}[block]{\centering\normalfont\Large\bfseries}{\chaptername{} \thechapter.}{1ex}{}{}
+\renewcommand{\chaptername}{Приложение}
+%\renewcommand*\printchaptername{\Large\bfseries\appendixname~}
+%\renewcommand{\thechapter}{Приложение \Alph{chapter}}
+%\renewcommand{\thechaptertoc}{Приложение \Alph{chapter}}
+
+%\renewcommand{\chaptermark}[1]{\markboth{\chaptername\ \thechapter.\ #1}{}}
+
+%\begin{appendices}
+
+\input{chapters/thesis-template-appendix1.tex}
+
+\clearpage
+
+\input{chapters/thesis-template-appendix2.tex}
+
+\clearpage
+
+\input{chapters/thesis-template-appendix3.tex}
+
+%\end{appendices}
+
+\label{end_of_document}
+
+%%% Local Variables:
+%%% TeX-engine: xetex
+%%% eval: (setq-local TeX-master (concat "../" (seq-find (-cut string-match ".*-3-pz\.tex$" <>) (directory-files ".."))))
+%%% End:

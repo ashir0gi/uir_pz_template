@@ -1,0 +1,33 @@
+% arara: xelatex
+% arara: biber
+% arara: xelatex: { synctex: true }
+
+\documentclass[12pt,a4paper,oneside,final]{report}
+
+\input{chapters/thesis-template-macro.tex}
+
+\addto{\captionsrussian}{\renewcommand{\bibname}{Список литературы}}
+
+\begin{document}
+
+% Для титульного листа, сверстанного в LaTeX
+\input{title/title-2-rspz}
+\newpage
+
+% Для вставки бланка титульного листа из PDF-файла
+% \includepdf[pages={-}, offset=0mm -0mm]{title/title.pdf}
+
+% Для листа задания, сверстанного в LaTeX
+\input{title/task}
+\newpage
+
+% Для вставки бланка задания из PDF-файла
+% \includepdf[pages={-}, offset=0mm -0mm]{title/task.pdf}
+
+\input{chapters/_content}
+
+\end{document}
+
+%%% Local Variables:
+%%% TeX-engine: xetex
+%%% End:
