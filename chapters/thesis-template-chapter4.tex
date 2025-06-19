@@ -1,91 +1,197 @@
-\chapter{Реализация и экспериментальная проверка \dots}
+\chapter{Реализация и экспериментальная проверка}
+\label{chapter4}
 
-В этой главе описывается, что и как было запрограммировано, отлажено, 
-протестировано, и что в результате получилось. Большинство работ должны 
-содержать приведенные ниже разделы. Но нужно учитывать, что точный состав 
-этой главы, как и других глав, зависит от специфики работы.
-
-Фрагменты программного кода в тексте необходимо выделять при помощи команды 
-\verb|\verb|. Многострочные листинги должны оформляться при помощи пакета 
-\verb|listings|. Пример:
-
-\begin{lstlisting}
-# let s x y z = x z (y z);;
-val s : ('a -> 'b -> 'c) -> ('a -> 'b) -> 'a -> 'c = <fun>
-# let k x y = x;;
-val k : 'a -> 'b -> 'a = <fun>
-# let i = s k k;;
-val i : '_a -> '_a = <fun>
-\end{lstlisting}
-
-Листинг \ref{lst:float-example} иллюстрирует использование выносных листингов.
-Листинг \ref{lst:HelloWorld.scala} показывает пример включения внешнего файла 
-в качестве листинга, в данном случае --- выносного.
-
-\begin{lstlisting}[
-  float=tb,frame=lines,label=lst:float-example,caption=Выносной листинг
-]
-List myList = new List();
-Element myElement = new Element();
-myList.Append(myElement);
-\end{lstlisting}
-
-\lstinputlisting[
-  label=lst:HelloWorld.scala,
-  float=tb,frame=lines,
-  caption=Листинг из файла \texttt{HelloWorld.scala}
-]{listings/HelloWorld.scala}
+В этой главе описывается, как была реализована система пошаговой бета-редукции и её синтаксические анализаторы на платформе .NET/F\#. Приведены ключевые фрагменты кода, описаны инструменты, структура ПО, сценарии работы, тестовые примеры и сравнительный анализ с существующими решениями.
 
 \section{Выбор инструментальных средств}
+Для реализации использовались:
+\begin{itemize}
+  \item Платформа \textbf{.NET 8.0+} и язык \textbf{F\#} — за выразительность в работе с AST и рекурсивными типами.
+  \item Библиотека \textbf{FParsec} для построения парсера в комбинаторном стиле.
+  \item NUnit для модульного тестирования.
+  \item Visual Studio / Rider для разработки и отладки.
+\end{itemize}
 
-В этом разделе обосновывается выбор инструментальных средств; одним из критериев выбора могут быть какие-либо требования к разрабатываемой системе, и если этих требований много, они могут быть выделены в отдельный раздел, или же в приложение. Этот пункт не пишется, если в аналитической главе был раздел, посвященный сравнительному анализу и выбору инструментальных средств.
+\section{Состав и структура реализованного ПО}
+Реализовано как F\#-библиотека (NuGet-пакет):
+\begin{itemize}
+  \item \texttt{BetaReduction.Parser} — модуль конфигурируемого парсера;
+  \item \texttt{BetaReduction.Machine} — абстрактная машина пошаговой редукции;
+  \item \texttt{BetaReduction.Environment \& Atomic} — определения атомиков и окружения;
+  \item \texttt{BetaReduction.Tests} — проект с NUnit-тестами.
+\end{itemize}
 
+\section{Основные сценарии работы}
+\begin{enumerate}
+  \item \textbf{Разбор выражения:} 
+    \[
+      \texttt{let term = BRParser().Parse("\textbackslash x -> x x")}
+    \]
+    — возвращает AST (\texttt{ITerm}).
+  \item \textbf{Пошаговая редукция:} 
+    \[
+      \texttt{let state = BetaReductor(cfg).EvaluateCode(code, true)}
+    \]
+    — один шаг.
+  \item \textbf{Полная нормализация:} 
+    \[
+      \texttt{BetaReductor(cfg).EvaluateCode(code, false)}
+    \]
+    — до нормальной формы.
+\end{enumerate}
 
+\section{Ключевые фрагменты кода}
 
+\subsection{Настройка парсера}
+Комбинаторный подход на FParsec: конфигурация операторов и колбэков вынесена в отдельный блок, что упрощает расширение:
 
-\section{Состав и структура реализованного программного обеспечения}
+\begin{lstlisting}[
+  float=tb,frame=lines,
+  label=lst:parser-config,
+  caption=Конфигурация BRParser: операторы, ключевые слова и колбэки
+]
+// определить унарные и бинарные операторы с приоритетами
+let brUnOps = [ UnOp {| keyword = "-"; term = atomicUnOpMinus; priority = 1 |} ]
+let brBinOps = [
+  BinOp {| keyword = "+"; term = atomicBinOpPlus;   priority = 1; associativity = Associativity.Left |}
+  BinOp {| keyword = "*"; term = atomicBinOpMult;   priority = 2; associativity = Associativity.Left |}
+  // ...
+]
 
-Нужно охарактеризовать реализованное ПО: является ли оно настольной программной для Windows, или веб-приложением в форме сайта/веб-сервиса, или модулем/подключаемой библиотекой, или \dots. Также нужно перечислить, из чего оно состоит: какие исполняемые файлы и их назначение, конфигурационные файлы, файлы баз данных, требования к программному и аппаратному окружению, и т.п.
+// объединить в конфиг
+let cfg = {
+  applicationTff     = appTff
+  simpleLambdaTff    = SimpleLambdaTff(subs)
+  multiLambdaTff     = Some (MultiLambdaTff(subs))
+  operators          = brUnOps @ brBinOps
+  keywords           = ["true"; "false"; "Y"; "NULL"]
+  parseNumericConsts = true
+  ifStatements       = false
+}
 
-Если реализованное приложение достаточно обширно, этот раздел может быть
-разделен на несколько: один с общим описанием, и по одному на подсистемы самого
-верхнего уровня.
+// привязать колбэки для переменных, чисел, ключевых слов
+p.pVariableCallback <- fun name -> DefaultVariable(name) :> ITerm
+p.pNumericCallback  <- fun n    -> match n with Int i -> Data.Int i | Float f -> Data.Float f
+p.pKeywordCallback  <- function
+  | "true"  -> Data.Bool true
+  | "false" -> Data.Bool false
+  | kw      -> raise (BRParsingException ...)
+\end{lstlisting}
 
+Пример задания конфигурации BRParser представлен в листинге \ref{lst:parser-config}.
 
+\subsection{Механизм одного шага редукции}
+Внутри \texttt{BetaReductor} ключевая функция \texttt{step} обрабатывает:
+\begin{itemize}
+  \item \textbf{β-редексы:} $(\lambda x.M)\,N \to M[x:=N]$;
+  \item \textbf{спуск внутрь:} если редексов нет, рекурсивно обходит подтермы;
+  \item \textbf{атомарные функции:} вызывает \texttt{IFunction.ReduceWithArguments}.
+\end{itemize}
 
-\section{Основные сценарии работы пользователя}
+\begin{lstlisting}[
+  float=tb,frame=lines,
+  label=lst:machine-step,
+  caption=Алгоритм одного шага в BetaReductor
+]
+let rec step term =
+  match term with
+  | :? IApplicationTerm as app ->
+      match app.Function with
+      | :? SimpleLambda as lam ->
+          // бета-редукция: подстановка первого аргумента
+          let arg = Seq.head app.Arguments
+          substitution.Substitute(lam.Body, seq { lam.Variable, arg })
+      | f when f :? IFunction ->
+          // атомарный вызов
+          f.ReduceWithArguments(app.Arguments, tff)
+      | _ ->
+          // спуск внутрь
+          // 1) пытаемся step(f)
+          // 2) если не изменилось, пробуем step на каждом аргументе
+          term
+  | :? IFunctionalAbstraction as lam ->
+      // спуск внутрь тела λ
+      let body' = step lam.GetBody
+      if not (obj.ReferenceEquals(body', lam.GetBody)) then
+        // пересоздать лямбду с новым телом
+        SimpleLambda(lam.GetBoundVariable, body', substitution) :> ITerm
+      else term
+  | _ -> term
+\end{lstlisting}
 
-Нужно помнить, что пользователем может быть не только <<менеджер>> или <<человек в белом халате>>, но и другой программист. Последнее относится, в первую очередь, к реализованным библиотекам. Для <<обычных>> приложений нередко бывают пользователи нескольких категорий --- например, обычный пользователь и администратор. Для каждой категории нужно описать, как выполняются основные функции, предпочтительно, с помощью серии скрин-шотов. Однако считается плохим тоном вставлять длинную вереницу из скрин-шотов: если их много, большую часть нужно выносить в приложение. Для \textit{этого} раздела нормальной является плотность скрин-шотов из расчета: 1 страница скрин-шотов на 1-2 страницы текста.
-
-
-
-
+Алгоритм шага редукции представлен в листинге \ref{lst:machine-step}.
 
 \section{Разработка тестовых примеров}
+\label{sec:test-examples}
 
-Описываются наиболее характерные тестовые примеры, для прогона на интеграционных тестах. (Да, использование unit-тестирование --- это почти всегда хорошо, основное исключение составляют работы, в которых используемый инструментарий по какой-либо причине в принципе исключает такую возможность. Например, что-нибудь вроде Mathematica.)
+Для обеспечения надёжности и корректности работы как парсера, так и абстрактной машины бета‑редукции, был разработан обширный набор NUnit‑тестов.
 
-В этом же разделе могут приводится и результаты тестирования, включая таблицы и
-графики. Результаты тестирования могут быть вынесены в отдельный раздел, если
-много текстового материала и/или использована (не совсем) стандартная методика
-тестирования (описание которой также нужно привести).
+\subsection{Тесты парсера}
 
-\textit{\textbf{Замечание.}} В ПЗ (как УИРа, так и ВКР) следует избегать ситуаций, когда значительную часть основного содержания составляют страницы с иллюстрациями и таблицами, особенно, если такие страницы следуют подряд. В основном тексте следует оставлять лишь самые основные таблицы и рисунки, а остальное --- выносить в приложение.
+Нижеследующие аспекты разбора покрываются тестами из модуля \texttt{ParseTest}:
+
+\begin{itemize}
+  \item \textbf{Лямбда‑абстракции:} проверяется, что строка вида \verb|\ x -> x| корректно преобразуется в \texttt{SimpleLambda}.  
+  \item \textbf{Унарные и бинарные операторы:} приоритеты и ассоциативность обрабатываются в соответствии с конфигурацией \texttt{unOps} и \texttt{binOps}.  
+  \\
+  \item \textbf{Вложенные абстракции и приложения:} тестируются случаи \(\lambda x.\,\lambda y.\,\lambda z.\,y\) и \((\lambda x.\,x+x)\,5\).  
+  \item \textbf{Скобочные конструкции:} проверяется различие между \(\,x + x - x\) и \(\,x + (x - x)\).  
+  \item \textbf{Ключевые слова:} пользовательские ключевики (\texttt{magicWord0}, \texttt{magicWord1}) обрабатываются через колбэк \texttt{pKeywordCallback}.  
+\end{itemize}
+
+\begin{lstlisting}[float=tb,frame=lines,label=lst:parser-test-example,caption={Пример теста для скобочных выражений}]
+[<Test>]
+member this.Parentheses() =
+  let noPar = "\\ x -> x plus x - x"
+  let withPar = "\\ x -> x plus (x - x)"
+  let gotNo = callParse2String(parser, noPar)
+  let gotPar = callParse2String(parser, withPar)
+  Assert.That(gotNo, Is.EqualTo(expectedNo))
+  Assert.That(gotPar, Is.EqualTo(expectedPar))
+\end{lstlisting}
+
+Пример теста для скобочных выражений представлен в листинге \ref{lst:parser-test-example}.
+
+\subsection{Тесты бета‑редуктора}
+
+Тестовый модуль \texttt{BetaReductionTests} проверяет корректность шаговой и полной редукции:
+
+\begin{itemize}
+  \item \textbf{Один шаг vs. полная нормализация:} для терма \((\lambda x.\,x\,x)\,x\) сравнивается результат одного шага и финальной формы.  
+  \item \textbf{Последовательность шагов:} функция \texttt{reduceStepByStep} строит весь путь редукции, и каждый промежуточный результат сравнивается с ожидаемым списком строковых представлений термов.  
+  \item \textbf{Атомарные операции:} проверка встроенных бинарных операций, например \((+\,1\,2)\to 3\).  
+  \item \textbf{Композиция λ‑выражений:} тесты для вложенных абстракций, например \(((\lambda x.\,x)\,(\lambda x.\,x))\) приводят к корректному результату.  
+\end{itemize}
+
+\begin{lstlisting}[float=tb,frame=lines,label=lst:reductor-step-test,caption={Проверка последовательности шагов редукции}]
+[<Test>]
+member _.``step by step plus``() =
+  let plus = Data.BinOp("+", fun a b -> match a,b with Int x,Int y -> Int(x+y) | _ -> failwith "")
+  let term = applicationTff.CreateTerm([ plus; Data.Int 1; Data.Int 2 ])
+  let seq = reduceStepByStep reductor (term2Code term)
+  Assert.That(seq |> List.last, Is.EqualTo("Int 3"))
+\end{lstlisting}
+
+Проверка последовательности шагов редукции представлена в листинге \ref{lst:reductor-step-test}.
 
 
-
-
-\section{Сравнение реализованного программного обеспечения с существующими аналогами}
-
-В сравнении должно быть отражено, чем полученное ПО выгодно (и невыгодно) отличается от прочих ближайших аналогов. Практика показывает, что аналоги есть всегда. А если нет аналогов, значит есть частичные решения, которые реализуют какие-то части функционала вашей системы. Тут тоже может быть относительно много таблиц и графиков.
-
-
+\section{Сравнение с существующими аналогами}
+\begin{table}[h]
+\centering\small
+\caption{Сравнение реализованного ПО и аналогов}
+\begin{tabular}{|l|l|l|l|}
+\hline
+Инструмент & Язык    & Стратегии       & Комментарий                   \\ \hline
+Mace       & F\#     & Normal, Full    & Модульность, .NET-интеграция \\ \hline
+GHCi       & Haskell & Call-by-Need    & Высокая производительность    \\ \hline
+Coq        & OCaml   & Call-by-Value   & Формальное доказательство     \\ \hline
+\end{tabular}
+\end{table}
 
 \section{Выводы}
-
-Следует перечислить, какие практические результаты были получены, а именно: какое программное или иное обеспечение было создано. В число результатов могут входить, например, методики тестирования, тестовые примеры (для проверки корректности/оценки характеристик тех или иных алгоритмов) и др. По каждому результату следует сделать вывод, насколько он отличается от известных промышленных аналогов и исследовательских прототипов.
-
-%%% Local Variables:
-%%% TeX-engine: xetex
-%%% eval: (setq-local TeX-master (concat "../" (seq-find (-cut string-match ".*-3-pz\.tex$" <>) (directory-files ".."))))
-%%% End:
+\begin{itemize}
+  \item Показана эффективность FParsec-комбинаторов для настраиваемого парсинга.
+  \item Абстрактная машина легко расширяется под новые стратегии.
+  \item Тесты подтверждают корректность и устойчивость реализации.
+  \item Проект готов к интеграции в образовательные и исследовательские среды на .NET.
+\end{itemize}
