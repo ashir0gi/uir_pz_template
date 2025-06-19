@@ -6,7 +6,7 @@
 \section{Использование и развитие открытой архитектуры системы изучения аппликативных вычислений}
 \label{sec:open-architecture}
 
-Для обеспечения максимально гибкой и расширяемой системы в проекте была принята методика открытой модульной архитектуры.  
+Для обеспечения максимально гибкой и расширяемой системы в проекте была принята методика открытой модульной архитектуры (рис. \ref{fig:IAbstract}).  
 Ключевые черты этой архитектуры:
 \begin{itemize}
   \item \textbf{Взаимодействие через интерфейсы}. Все основные компоненты системы (атомики, правила редукции, парсер, абстрактная машина) взаимодействуют только через чётко определённые F\#-интерфейсы (\texttt{IAtomic},\texttt{IAbstractMachine}, \texttt{ILanguageParser},\\\texttt{ITff}  и др.).
@@ -70,6 +70,13 @@
 
 Класс \texttt{BetaReductor} может служить основой не только для вычислений, но и для построения обучающих сред, отладчиков, UI-компонентов, использующих понятие вычислительного шага.
 
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.8\textwidth]{./img/IAbstract.jpg}
+  \caption{ILanguageParser и его реализация BRParser, а также IAbstractMachine и реализация BetaReductor}
+  \label{fig:IAbstract}
+\end{figure}
+
 \section{Комбинаторный подход к проектированию синтаксического анализатора}
 \label{sec:parser-api}
 
@@ -94,7 +101,7 @@
 
 \subsection{Конфигурация и расширяемость}
 
-Конфигурация \texttt{Config} играет роль DSL для описания синтаксиса. Она включает:
+Конфигурация \texttt{Config} (рис. \ref{fig:config}) играет роль DSL для описания синтаксиса. Она включает:
 
 \begin{itemize}
   \item \textbf{Операторы} — как унарные, так и бинарные, задаются в виде списка структур с полями: \texttt{keyword}, \texttt{term}, \texttt{priority}, \texttt{associativity}. Это позволяет реализовать приоритетный парсинг по методике Pratt Parser.
@@ -135,6 +142,13 @@
   \item предоставляет читаемое сообщение для отображения пользователю;
   \item хранит стек вызовов для внутренней отладки.
 \end{itemize}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.8\textwidth]{./img/Config.jpg}
+  \caption{Работа BRParser с Config}
+  \label{fig:config}
+\end{figure}
 
 
 \section{Выводы}

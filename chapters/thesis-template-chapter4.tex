@@ -13,13 +13,47 @@
 \end{itemize}
 
 \section{Состав и структура реализованного ПО}
-Реализовано как F\#-библиотека (NuGet-пакет):
+\label{sec:software-structure}
+
+Результат работы оформлен как набор модулей F\#, упакованных в единый NuGet‑пакет \texttt{Mephi.Cybernetics.Mace.BetaReduction}. Реализованное ПО является библиотекой классов на языках C\# и F\# на платформе .NET 8.0+. Основные компоненты:
+
 \begin{itemize}
-  \item \texttt{BetaReduction.Parser} — модуль конфигурируемого парсера;
-  \item \texttt{BetaReduction.Machine} — абстрактная машина пошаговой редукции;
-  \item \texttt{BetaReduction.Environment \& Atomic} — определения атомиков и окружения;
-  \item \texttt{BetaReduction.Tests} — проект с NUnit-тестами.
-\end{itemize}
+  \item \texttt{BetaReduction.Parser}  
+    \begin{itemize}
+      \item Построен на библиотеке FParsec.  
+      \item Содержит класс \texttt{BRParser} (реализует \texttt{ILanguageParser}):  
+        \begin{itemize}
+          \item Конфигурация через \texttt{Config}, где задаются списки унарных и бинарных операторов, ключевые слова и флаги.
+          \item Колбэки \texttt{pVariableCallback}, \texttt{pNumericCallback}, \texttt{pKeywordCallback} для превращения токенов в объекты \texttt{ITerm}.
+          \item Исключения \texttt{BRParsingException} для унифицированной обработки ошибок разбора.
+        \end{itemize}
+      \item Парсер легко расширяется: достаточно добавить в \texttt{Config.operators} новый \texttt{UnOp} или \texttt{BinOp}, либо расширить список \texttt{keywords}.
+    \end{itemize}
+
+  \item \texttt{BetaReduction.Machine}  
+    \begin{itemize}
+      \item Содержит абстрактную машину \texttt{BetaReductor} (реализует \texttt{IAbstractMachine}):  
+        \begin{itemize}
+          \item \texttt{CreateDefaultState}, \texttt{EvaluateCode} и \texttt{EvaluateState} для пошагового и полного редуцирования.
+          \item Типы-обёртки \texttt{Code(term: ITerm)} и \texttt{State(code, stepNum, isFinal)} для хранения текущего терма, номера шага и флага завершённости.
+          \item Рекурсивная функция \texttt{evaluateOneStep} обрабатывает бета‑редексы, атомарные вызовы (\texttt{IAtomic.ReduceWithArguments}) и погружение в тело абстракций.
+          \item Полная нормализация реализована как рекурсивный цикл вызовов \\\texttt{evaluateOneStep}.
+        \end{itemize}
+      \item Регистрами машины выступает единственный регистр \texttt{Term}, что упрощает визуализацию каждого шага.
+    \end{itemize}
+
+  \item \texttt{BetaReduction.Environment \& Atomic}  
+    \begin{itemize}
+      \item \texttt{Environment} — коллекция \texttt{ITff} и \texttt{IAtomic}, настраиваемая в зависимости от домена (BR vs CAM).  
+      \item \texttt{Atomic} — набор предопределённых атомиков (\texttt{Int}, \texttt{Bool}, арифметические и логические операторы, \texttt{IfComb}, \texttt{YComb}).  
+      \item Каждый атомик реализует интерфейс \texttt{IAtomic}:  
+        \texttt{Arity}, \texttt{IsReducibleWith} и \texttt{ReduceWithArguments} описывают семантику.
+    \end{itemize}
+
+
+\noindent
+Каждый из перечисленных модулей структурирован по принципу «один файл — одна ответственность», что упрощает поддержку и развитие проекта. Весь исходный код легко интегрируется в другие .NET‑проекты и может быть опубликован как NuGet‑пакет.
+
 
 \section{Основные сценарии работы}
 \begin{enumerate}
@@ -53,8 +87,10 @@
 // определить унарные и бинарные операторы с приоритетами
 let brUnOps = [ UnOp {| keyword = "-"; term = atomicUnOpMinus; priority = 1 |} ]
 let brBinOps = [
-  BinOp {| keyword = "+"; term = atomicBinOpPlus;   priority = 1; associativity = Associativity.Left |}
-  BinOp {| keyword = "*"; term = atomicBinOpMult;   priority = 2; associativity = Associativity.Left |}
+  BinOp {| keyword = "+"; term = atomicBinOpPlus;   priority = 1; 
+        associativity = Associativity.Left |}
+  BinOp {| keyword = "*"; term = atomicBinOpMult;   priority = 2; 
+        associativity = Associativity.Left |}
   // ...
 ]
 
@@ -71,7 +107,8 @@ let cfg = {
 
 // привязать колбэки для переменных, чисел, ключевых слов
 p.pVariableCallback <- fun name -> DefaultVariable(name) :> ITerm
-p.pNumericCallback  <- fun n    -> match n with Int i -> Data.Int i | Float f -> Data.Float f
+p.pNumericCallback  <- fun n    -> match n with Int i -> Data.Int i | 
+    Float f -> Data.Float f
 p.pKeywordCallback  <- function
   | "true"  -> Data.Bool true
   | "false" -> Data.Bool false
@@ -166,7 +203,8 @@ member this.Parentheses() =
 \begin{lstlisting}[float=tb,frame=lines,label=lst:reductor-step-test,caption={Проверка последовательности шагов редукции}]
 [<Test>]
 member _.``step by step plus``() =
-  let plus = Data.BinOp("+", fun a b -> match a,b with Int x,Int y -> Int(x+y) | _ -> failwith "")
+  let plus = Data.BinOp("+", fun a b -> match a,b with Int x,Int y -> 
+        Int(x+y) | _ -> failwith "")
   let term = applicationTff.CreateTerm([ plus; Data.Int 1; Data.Int 2 ])
   let seq = reduceStepByStep reductor (term2Code term)
   Assert.That(seq |> List.last, Is.EqualTo("Int 3"))
@@ -174,24 +212,49 @@ member _.``step by step plus``() =
 
 Проверка последовательности шагов редукции представлена в листинге \ref{lst:reductor-step-test}.
 
-
 \section{Сравнение с существующими аналогами}
-\begin{table}[h]
-\centering\small
-\caption{Сравнение реализованного ПО и аналогов}
-\begin{tabular}{|l|l|l|l|}
-\hline
-Инструмент & Язык    & Стратегии       & Комментарий                   \\ \hline
-Mace       & F\#     & Normal, Full    & Модульность, .NET-интеграция \\ \hline
-GHCi       & Haskell & Call-by-Need    & Высокая производительность    \\ \hline
-Coq        & OCaml   & Call-by-Value   & Формальное доказательство     \\ \hline
-\end{tabular}
-\end{table}
+\label{sec:comparison-analogs}
+
+Было произведени сравнение разработанным в данной работе решением с одним из аналогов визуализации работы абстррактной машины \textbf{WinCam} (см. рис.~\ref{fig:wincam}).
+
+
+\subsection*{Преимущества WinCam}
+\begin{itemize}
+  \item Имеется визуализация термов в представлении де Брейна.
+  \item Разработана встроенная справочная книга с набором готовых учебных примеров.
+  \item Поддерживается выбор учебного языка из фиксированного набора.
+\end{itemize}
+
+\subsection*{Недостатки WinCam}
+\begin{itemize}
+  \item Интерфейс устаревший, перегруженный и плохо адаптирован под начинающих пользователей.
+  \item Отсутствует модульность — невозможно добавить собственные вычислительные стратегии, лексемы или атомики без изменения исходного кода.
+  \item Программа работает только под Windows и основана на устаревшем .NET Framework, что делает её недоступной для пользователей Linux и macOS.
+\end{itemize}
+
+\subsection*{Преимущества разработанного решения}
+\begin{itemize}
+  \item Реализована архитектура, ориентированная на расширяемость: пользователи могут определять собственные атомики (\texttt{IAtomic}), языковые конструкции (\texttt{ILanguageParser}) и стратегии редукции.
+  \item Предусмотрена возможность свободного переключения между абстрактными машинами.
+  \item Приложение сопровождается справочником с примерами, документацией и шаблонами использования.
+  \item Кроссплатформенность — работает на Windows, Linux и macOS благодаря использованию .NET 8.0+.
+\end{itemize}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.8\textwidth]{./img/WinCam.png}
+  \caption{Интерфейс WinCam: лямбда‑терм, отображение терма де Брейна и шаги КАМ}
+  \label{fig:wincam}
+\end{figure}
+
+Графический пользовательский интерфейс WinCam представлен на рис. \ref{fig:wincam}.
+
+
 
 \section{Выводы}
 \begin{itemize}
-  \item Показана эффективность FParsec-комбинаторов для настраиваемого парсинга.
-  \item Абстрактная машина легко расширяется под новые стратегии.
-  \item Тесты подтверждают корректность и устойчивость реализации.
-  \item Проект готов к интеграции в образовательные и исследовательские среды на .NET.
+  \item В данной главе была представлена реализация бета-редуктора на платформе .NET с использованием языка F\# и библиотеки FParsec. Основное внимание было уделено структуре программного обеспечения, принципам модульности и расширяемости, ключевым компонентам (парсер, абстрактная машина, атомики) и механизмам настройки.
+  \item Были разработаны сценарии использования системы — от разбора выражения до полной нормализации — и подтверждена корректность их реализации с помощью модульных тестов на базе NUnit. Предложенные подходы к конфигурации синтаксического анализатора и построению редуктора позволяют эффективно адаптировать систему под различные домены и языки.
+  \item Сравнение с системой WinCam, показало, что разработанное решение обладает более современной архитектурой, кроссплатформенностью и гибкостью. Оно предоставляет пользователю расширенные возможности по настройке языка, визуализации и интеграции в другие проекты .NET.
 \end{itemize}
+Таким образом, реализованная система представляет собой современный, расширяемый и тестируемый инструмент для пошаговой редукции λ-термов, пригодный как для образовательных, так и для исследовательских целей.
