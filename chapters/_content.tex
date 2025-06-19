@@ -85,6 +85,7 @@
 %\appendixtocon
 %\renewcommand{\appendixname}{Приложение}
 \appendix
+\renewcommand{\thechapter}{\Asbuk{chapter}}
 \renewcommand{\appendixtocname}{Приложения}
 \addappheadtotoc
 %\titleformat{\chapter}[block]{\centering\normalfont\Large\bfseries}{\chaptername{} \thechapter.}{1ex}{}{}
@@ -95,7 +96,7 @@
 
 %\renewcommand{\chaptermark}[1]{\markboth{\chaptername\ \thechapter.\ #1}{}}
 
-%\begin{appendices}
+% \begin{appendices}
 
 \input{chapters/thesis-template-appendix1.tex}
 
@@ -105,9 +106,9 @@
 
 \clearpage
 
-\input{chapters/thesis-template-appendix3.tex}
+% \input{chapters/thesis-template-appendix3.tex}
 
-%\end{appendices}
+% \end{appendices}
 
 \label{end_of_document}
 
